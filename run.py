@@ -84,7 +84,8 @@ dataloader = DataLoader(
 # ----------
 
 for epoch in range(opt.epoch, opt.n_epochs):
-    for i, imgs in enumerate(tqdm(dataloader)):
+    pbar = tqdm(enumerate(dataloader), total=len(dataloader))
+    for i, imgs in pbar:
 
         # Configure model input
         imgs_lr = Variable(imgs["lr"].type(Tensor))
@@ -137,19 +138,21 @@ for epoch in range(opt.epoch, opt.n_epochs):
         #  Log Progress
         # --------------
 
-        sys.stdout.write(
-            "\n[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
-            % (epoch, opt.n_epochs, i, len(dataloader), loss_D.item(), loss_G.item())
-        )
-
         batches_done = epoch * len(dataloader) + i
         if batches_done % opt.sample_interval == 0:
             # Save image grid with upsampled inputs and SRGAN outputs
             imgs_lr = nn.functional.interpolate(imgs_lr, scale_factor=4)
             gen_hr = make_grid(gen_hr, nrow=1, normalize=True)
             imgs_lr = make_grid(imgs_lr, nrow=1, normalize=True)
-            img_grid = torch.cat((imgs_lr, gen_hr), -1)
+            imgs_hr = make_grid(imgs_hr, nrow=1, normalize=True)
+            img_grid = torch.cat((imgs_lr, gen_hr, imgs_hr), -1)
             save_image(img_grid, "images/%d.png" % batches_done, normalize=False)
+
+    sys.stdout.write(
+        "\n[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
+        % (epoch, opt.n_epochs, i, len(dataloader), loss_D.item(), loss_G.item())
+    )
+
 
     if opt.checkpoint_interval != -1 and epoch % opt.checkpoint_interval == 0:
         # Save model checkpoints
